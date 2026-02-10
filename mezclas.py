@@ -3,19 +3,21 @@ import pandas as pd
 from fpdf import FPDF
 import datetime
 
+# 1. Configuración de la interfaz (Identidad DUSA)
 st.set_page_config(page_title="Mezclas DUSA", layout="centered")
 
-# --- LÓGICA DEL PDF ---
-def crear_pdf(datos, resumen):
+# 2. Función para generar el reporte PDF
+def crear_reporte_pdf(tabla, resultados):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, "DUSA - REPORTE DE MEZCLAS", ln=True, align='C')
-    pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 10, f"Fecha: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='R')
-    pdf.ln(5)
+    pdf.ln(10)
     
-    # Tabla
+    # Detalle de la mezcla
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "Detalle de los Componentes:", ln=True)
+    
     pdf.set_font("Arial", 'B', 10)
     pdf.cell(60, 10, "Componente", 1)
     pdf.cell(40, 10, "Volumen (L)", 1)
@@ -23,52 +25,87 @@ def crear_pdf(datos, resumen):
     pdf.ln()
     
     pdf.set_font("Arial", '', 10)
-    for _, fila in datos.iterrows():
-        pdf.cell(60, 10, str(fila['Tipo']), 1)
-        pdf.cell(40, 10, str(fila['Volumen']), 1)
-        pdf.cell(40, 10, str(fila['GL']), 1)
+    for _, fila in tabla.iterrows():
+        pdf.cell(60, 10, str(fila['Componente']), 1)
+        pdf.cell(40, 10, f"{fila['Volumen']:.2f}", 1)
+        pdf.cell(40, 10, f"{fila['GL']:.2f}", 1)
         pdf.ln()
     
-    pdf.ln(5)
+    pdf.ln(10)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "RESULTADOS:", ln=True)
+    pdf.cell(0, 10, "RESULTADOS FINALES:", ln=True)
     pdf.set_font("Arial", '', 11)
-    for k, v in resumen.items():
+    for k, v in resultados.items():
         pdf.cell(0, 8, f"{k}: {v}", ln=True)
-    return pdf.output(dest='S').encode('latin-1')
+    
+    return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-# --- INTERFAZ ---
+# 3. Interfaz de la Aplicación
 st.title("🧪 Mezcla de Alcoholes DUSA")
+st.write("Agregue líneas para alcoholes o agua (0 GL).")
 
-# Tabla de entrada
-if 'datos' not in st.session_state:
-    st.session_state.datos = pd.DataFrame([{"Tipo": "Alcohol Etilico", "Volumen": 1000.0, "GL": 96.0}])
+# Matriz de entrada dinámica
+if 'tabla_datos' not in st.session_state:
+    st.session_state.tabla_datos = pd.DataFrame([
+        {"Componente": "Alcohol base", "Volumen": 1000.0, "GL": 96.0},
+        {"Componente": "Agua", "Volumen": 0.0, "GL": 0.0}
+    ])
 
-df_ed = st.data_editor(st.session_state.datos, num_rows="dynamic")
+df_final = st.data_editor(st.session_state.tabla_datos, num_rows="dynamic")
 
-# Cálculos rápidos
-laa_total = (df_ed['Volumen'] * df_ed['GL'] / 100).sum()
-vol_total = df_ed['Volumen'].sum()
+# Ecuaciones de mezcla
+# LAA = Volumen * GL / 100
+laa_sum = (df_final['Volumen'] * df_final['GL'] / 100).sum()
+vol_sum = df_final['Volumen'].sum()
 
 st.divider()
-res = {}
+diccionario_res = {}
 
-col1, col2 = st.columns(2)
-with col1:
+# Botones de Acción
+c1, c2 = st.columns(2)
+
+with c1:
+    st.subheader("Modo 1: Final")
     if st.button("Calcular Grado Final (Cf)"):
-        if vol_total > 0:
-            cf = (laa_total * 100) / vol_total
-            st.metric("Grado Final", f"{cf:.2f} GL")
-            res = {"Volumen Total": vol_total, "Grado Final": f"{cf:.2f} GL", "Total LAA": laa_total}
+        if vol_sum > 0:
+            cf_calc = (laa_sum * 100) / vol_sum
+            st.metric("Resultado Cf", f"{cf_calc:.2f} GL")
+            st.metric("Total LAA", f"{laa_sum:.2f}")
+            diccionario_res = {
+                "Volumen Total (Vf)": f"{vol_sum:,.2f} L",
+                "Grado Final (Cf)": f"{cf_calc:.2f} GL",
+                "Total LAA": f"{laa_sum:.2f}"
+            }
 
-with col2:
-    target = st.number_input("Grado Objetivo:", value=40.0)
-    if st.button("Calcular Agua (Va)"):
-        vf = (laa_total * 100) / target
-        va = vf - vol_total
-        st.metric("Agua a añadir", f"{max(0, va):.2f} L")
-        res = {"Agua a añadir": f"{va:.2f} L", "Volumen Final": vf, "Total LAA": laa_total}
+with c2:
+    st.subheader("Modo 2: Ajuste")
+    grado_obj = st.number_input("Grado Objetivo (GL):", value=40.0, step=0.1)
+    if st.button("Calcular Agua Necesaria (Va)"):
+        if grado_obj > 0:
+            # Vf = LAA_totales * 100 / Cf_deseada
+            vf_calc = (laa_sum * 100) / grado_obj
+            # Va = Vf - V_ya_existente
+            va_calc = vf_calc - vol_sum
+            
+            st.metric("Agua a añadir (Va)", f"{max(0, va_calc):,.2f} L")
+            st.metric("Volumen Final (Vf)", f"{vf_calc:,.2f} L")
+            diccionario_res = {
+                "Agua Necesaria (Va)": f"{max(0, va_calc):,.2f} L",
+                "Volumen Final (Vf)": f"{vf_calc:,.2f} L",
+                "Grado Objetivo": f"{grado_obj:.2f} GL",
+                "Total LAA": f"{laa_sum:.2f}"
+            }
 
-if res:
-    reporte = crear_pdf(df_ed, res)
-    st.download_button("📥 Descargar PDF", reporte, "mezcla_dusa.pdf", "application/pdf")
+# Generación del reporte
+if diccionario_res:
+    st.divider()
+    try:
+        archivo_pdf = crear_reporte_pdf(df_final, diccionario_res)
+        st.download_button(
+            label="📥 Descargar Reporte PDF",
+            data=archivo_pdf,
+            file_name=f"reporte_mezcla_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf"
+        )
+    except Exception as e:
+        st.error(f"Error al generar PDF: {e}")
