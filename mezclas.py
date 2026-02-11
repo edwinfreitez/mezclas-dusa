@@ -6,7 +6,6 @@ st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 # 1. Encabezado con Logo y Título Reducido
 st.image("https://dusa.com.ve/wp-content/uploads/2020/10/Logo-Original.png", width=180)
 
-# CORRECCIÓN: unsafe_allow_html=True
 st.markdown('<h2 style="font-size: 24px; margin-bottom: 0px; margin-top: -20px;">🧮 Calculadora de Mezclas</h2>', unsafe_allow_html=True)
 st.markdown("""
 **Destilerías Unidas S.A.** *© Edwin Freitez*
@@ -36,7 +35,7 @@ with st.form("nuevo_componente", clear_on_submit=True):
         else:
             st.error("Complete todos los campos.")
 
-# 4. Función de Formateo
+# 4. Función de Formateo para Métricas y Alertas
 def formatear_venezuela(valor, decimales=0):
     val = float(valor) if valor else 0.0
     texto = "{:,.{}f}".format(val, decimales)
@@ -44,11 +43,12 @@ def formatear_venezuela(valor, decimales=0):
 
 # 5. Matriz Editable y Cálculos
 df_base = pd.DataFrame(st.session_state.lista_mezcla)
-
 v_total_temp = df_base["Volumen (L)"].sum()
 df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (°GL)"]) / 100
 df_base["% Vol"] = df_base["Volumen (L)"].apply(lambda x: (x / v_total_temp * 100) if v_total_temp > 0 else 0.0)
 
+# CONFIGURACIÓN DE COLUMNAS (Punto 1: Formato Venezuela en la Matriz)
+# Nota: Streamlit usa formato de lenguaje. 'de-DE' usa punto para miles y coma para decimal.
 df_editado = st.data_editor(
     df_base,
     num_rows="dynamic",
@@ -56,17 +56,16 @@ df_editado = st.data_editor(
     hide_index=True,
     column_config={
         "Componente": st.column_config.TextColumn("Componente"),
-        "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%d"),
+        "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%.d", help="Use puntos para miles si es necesario"),
         "Grado (°GL)": st.column_config.NumberColumn("Grado (°GL)", format="%.1f"),
-        "LAA": st.column_config.NumberColumn("LAA", format="%.0f", disabled=True),
+        "LAA": st.column_config.NumberColumn("LAA", format="%.2f", disabled=True),
         "% Vol": st.column_config.NumberColumn("% Vol", format="%.1f %%", disabled=True)
     }
 )
 
-# Sincronización
 st.session_state.lista_mezcla = df_editado[["Componente", "Volumen (L)", "Grado (°GL)"]].to_dict('records')
 
-# 6. PANEL DE CONTROL (Métricas automáticas)
+# 6. PANEL DE CONTROL
 v_total = int(df_editado["Volumen (L)"].sum())
 laa_total = df_editado["LAA"].sum()
 grado_final = (laa_total * 100) / v_total if v_total > 0 else 0.0
@@ -79,20 +78,19 @@ t3.metric(label="GRADO FINAL", value=f"{formatear_venezuela(grado_final, 2)} °G
 
 st.divider()
 
-# 7. Cálculo de Agua
-col_input, col_boton = st.columns([2, 2])
+# 7. Cálculo de Agua (Punto 2: Reorganizado debajo del input)
+col_calc = st.columns(1)[0] # Usamos una sola columna para que todo sea vertical
 
-with col_input:
+with col_calc:
     grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
-
-with col_boton:
-    st.write("##") # Espaciador
-    if st.button("CALCULAR AGUA (Va)"):
+    
+    if st.button("CALCULAR AGUA (Va)", use_container_width=True):
         if grado_obj > 0:
             vf = (laa_total * 100) / grado_obj
             va = max(0, vf - v_total)
             st.warning(f"### Añadir: {formatear_venezuela(va, 0)} L")
 
+st.write("") # Espaciador
 if st.button("🗑️ Resetear Matriz"):
     st.session_state.lista_mezcla = [{"Componente": "Agua", "Volumen (L)": 0, "Grado (°GL)": 0.0}]
     st.rerun()
