@@ -1,61 +1,55 @@
 import streamlit as st
 import pandas as pd
-from fpdf import FPDF
-import datetime
 
+# Configuración de página
 st.set_page_config(page_title="Mezclas DUSA", layout="centered")
 
-def crear_reporte_pdf(tabla, resultados):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "DUSA - REPORTE DE MEZCLAS", ln=True, align='C')
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "Componentes:", ln=True)
-    pdf.set_font("Arial", '', 10)
-    for _, fila in tabla.iterrows():
-        pdf.cell(0, 8, f"- {fila['Componente']}: {fila['Volumen']} L a {fila['GL']} GL", ln=True)
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "RESULTADOS:", ln=True)
-    for k, v in resultados.items():
-        pdf.cell(0, 8, f"{k}: {v}", ln=True)
-    return pdf.output(dest='S').encode('latin-1', 'ignore')
+st.title("🧪 Calculadora de Mezclas DUSA")
+st.markdown("---")
 
-st.title("🧪 Mezcla de Alcoholes DUSA")
+# 1. Matriz de Datos Dinámica
+st.subheader("1. Carga de Componentes")
+st.write("Usa el botón (+) al final de la tabla para agregar filas.")
 
-if 'tabla_datos' not in st.session_state:
-    st.session_state.tabla_datos = pd.DataFrame([
-        {"Componente": "Alcohol base", "Volumen": 1000.0, "GL": 96.0},
-        {"Componente": "Agua", "Volumen": 0.0, "GL": 0.0}
+if 'datos' not in st.session_state:
+    st.session_state.datos = pd.DataFrame([
+        {"Componente": "Alcohol base", "Volumen (L)": 1000.0, "Grado (GL)": 96.0},
+        {"Componente": "Agua", "Volumen (L)": 0.0, "Grado (GL)": 0.0}
     ])
 
-df_final = st.data_editor(st.session_state.tabla_datos, num_rows="dynamic")
+# Editor de la tabla
+df_editado = st.data_editor(st.session_state.datos, num_rows="dynamic", use_container_width=True)
 
-laa_sum = (df_final['Volumen'] * df_final['GL'] / 100).sum()
-vol_sum = df_final['Volumen'].sum()
+# 2. Cálculos Matemáticos (Ecuaciones 1, 2, 3 y 4)
+# LAA parcial = (V * GL) / 100
+laa_total = (df_editado["Volumen (L)"] * df_editado["Grado (GL)"] / 100).sum()
+vol_actual = df_editado["Volumen (L)"].sum()
 
-st.divider()
-diccionario_res = {}
+st.markdown("---")
 
-c1, c2 = st.columns(2)
-with c1:
-    if st.button("Calcular Grado Final (Cf)"):
-        if vol_sum > 0:
-            cf_calc = (laa_sum * 100) / vol_sum
-            st.metric("Resultado Cf", f"{cf_calc:.2f} GL")
-            diccionario_res = {"Volumen Total": f"{vol_sum} L", "Grado Final": f"{cf_calc:.2f} GL", "Total LAA": f"{laa_sum:.2f}"}
+# 3. Botones de Acción
+col1, col2 = st.columns(2)
 
-with c2:
-    grado_obj = st.number_input("Grado Objetivo (GL):", value=40.0)
-    if st.button("Calcular Agua (Va)"):
-        if grado_obj > 0:
-            vf_calc = (laa_sum * 100) / grado_obj
-            va_calc = vf_calc - vol_sum
-            st.metric("Agua a añadir (Va)", f"{max(0, va_calc):,.2f} L")
-            diccionario_res = {"Agua Necesaria": f"{va_calc:.2f} L", "Volumen Final": f"{vf_calc:.2f} L", "Total LAA": f"{laa_sum:.2f}"}
+with col1:
+    st.subheader("Calcular Grado Final")
+    if st.button("Obtener Cf (Ec. 1)"):
+        if vol_actual > 0:
+            cf = (laa_total * 100) / vol_actual
+            st.success(f"**Grado Final (Cf):** {cf:.2f} °GL")
+            st.metric("Total LAA", f"{laa_total:.2f}")
+        else:
+            st.error("El volumen total debe ser mayor a 0")
 
-if diccionario_res:
-    pdf_out = crear_reporte_pdf(df_final, diccionario_res)
-    st.download_button("📥 Descargar Reporte PDF", pdf_out, "reporte_dusa.pdf", "application/pdf")
+with col2:
+    st.subheader("Calcular Agua Necesaria")
+    grado_deseado = st.number_input("Grado Objetivo (°GL):", value=40.0, step=0.1)
+    if st.button("Obtener Va (Ec. 3)"):
+        if grado_deseado > 0:
+            # Vf = (Sumatoria LAA * 100) / Cf
+            vol_final_necesario = (laa_total * 100) / grado_deseado
+            # Va = Vf - Vol_ya_cargado
+            agua_a_añadir = vol_final_necesario - vol_actual
+            
+            st.warning(f"**Agua a añadir (Va):** {max(0, agua_a_añadir):,.2f} L")
+            st.metric("Volumen Final (Vf)", f"{vol_final_necesario:,.2f} L")
+            st.info(f"Total LAA: {laa_total:.2f}")
