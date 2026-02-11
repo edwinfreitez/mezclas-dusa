@@ -3,23 +3,23 @@ import pandas as pd
 
 st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 
-st.title("🧪 CALCULADORA DE MEZLCAS")
+st.title("🧪 Calculadora de Mezclas")
 
 # 1. Inicialización de la lista
 if 'lista_mezcla' not in st.session_state:
     st.session_state.lista_mezcla = [
-        {"Componente": "Agua", "Volumen (L)": 0, "Grado (°GL)": 0.0}
+        {"Componente": "Agua", "Volumen (L)": 0, "Grado (GL)": 0.0}
     ]
 
 # 2. Formulario de carga
-with st.expander("➕ Añadir", expanded=True):
+with st.expander("➕ Añadir Nuevo Componente", expanded=True):
     with st.form("nuevo_componente", clear_on_submit=True):
         c1, c2, c3 = st.columns([2, 1, 1])
-        nombre = c1.text_input("Tipo del Alcohol:")
+        nombre = c1.text_input("Nombre del Alcohol:")
         vol = c2.number_input("Volumen (L):", min_value=0, step=1)
         grado = c3.number_input("Grado (GL):", min_value=0.0, max_value=100.0, step=0.1)
         
-        submit = st.form_submit_button("Añadir a la mezcla")
+        submit = st.form_submit_button("Añadir a la Mezcla")
         if submit:
             st.session_state.lista_mezcla.append({
                 "Componente": nombre, 
@@ -32,14 +32,14 @@ df_base = pd.DataFrame(st.session_state.lista_mezcla)
 v_total = df_base["Volumen (L)"].sum()
 
 # Cálculos de LAA y %
-df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (°GL)"]) / 100
+df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (GL)"]) / 100
 if v_total > 0:
     df_base["% Vol"] = (df_base["Volumen (L)"] / v_total) * 100
 else:
     df_base["% Vol"] = 0.0
 
 # 4. Matriz de Mezcla Actual con opción de ELIMINAR
-st.subheader("Matriz de Componentes")
+st.subheader("Matriz de Mezcla Actual")
 st.info("Para eliminar una fila, selecciónela y pulse la tecla 'Suprimir' o use el menú del editor.")
 
 # Formateo de números al estilo solicitado (Punto miles, Coma decimal)
@@ -83,14 +83,14 @@ st.divider()
 col_a, col_b = st.columns(2)
 
 with col_a:
-    if st.button("CALCULAR GRADO FINAL (°GL)"):
+    if st.button("CALCULAR GRADO FINAL"):
         if v_total > 0:
             cf = (laa_total * 100) / v_total
             st.success(f"###  {fmt_vzla(cf, 2)} °GL")
 
 with col_b:
-    grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
-    if st.button("CALCULAR CANTIDAD DE AGUA"):
+    grado_obj = st.number_input("Grado deseado (°GL):", value=40.0)
+    if st.button("CALCULAR AGUA"):
         if grado_obj > 0:
             vf = (laa_total * 100) / grado_obj
             va = vf - v_total
