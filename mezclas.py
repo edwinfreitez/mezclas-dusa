@@ -18,7 +18,7 @@ with st.form("nuevo_componente", clear_on_submit=True):
     vol = c2.number_input("Volumen (L):", min_value=0, step=1)
     grado = c3.number_input("Grado (GL):", min_value=0.0, max_value=100.0, step=0.1)
     
-    submit = st.form_submit_button("añadir a la mezcla")
+    submit = st.form_submit_button("➕ Añadir a la mezcla")
     if submit:
         st.session_state.lista_mezcla.append({
             "Componente": nombre, 
