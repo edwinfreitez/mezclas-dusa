@@ -75,7 +75,7 @@ def fmt_vzla(valor, decimales=0):
     return res
 
 t1.metric("TOTAL VOLUMEN (L)", fmt_vzla(v_total))
-t2.metric("TOTAL LAA", fmt_vzla(laa_total, 2))
+t2.metric("TOTAL LAA", fmt_vzla(laa_total, 0))
 
 st.divider()
 
@@ -83,14 +83,14 @@ st.divider()
 col_a, col_b = st.columns(2)
 
 with col_a:
-    if st.button("CALCULAR GRADO FINAL (Cf)"):
+    if st.button("CALCULAR GRADO FINAL (°GL)"):
         if v_total > 0:
             cf = (laa_total * 100) / v_total
             st.success(f"### Cf: {fmt_vzla(cf, 2)} °GL")
 
 with col_b:
-    grado_obj = st.number_input("Grado Objetivo (°GL):", value=40.0)
-    if st.button("CALCULAR AGUA (Va)"):
+    grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
+    if st.button("CALCULAR CANTIDAD DE AGUA"):
         if grado_obj > 0:
             vf = (laa_total * 100) / grado_obj
             va = vf - v_total
