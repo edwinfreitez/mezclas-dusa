@@ -3,44 +3,53 @@ import pandas as pd
 
 st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 
-st.title("🧪 Calculadora de Mezclas")
+# 1. Encabezado con Logo, Título y Firma
+st.image("https://dusa.com.ve/wp-content/uploads/2020/10/Logo-Original.png", width=200)
+st.title("🧮 Calculadora de Mezclas")
+st.markdown("""
+**Destilerías Unidas S.A.** *© Edwin Freitez*
+""")
 
-# 1. Inicialización de la lista
+# 2. Inicialización de la lista
 if 'lista_mezcla' not in st.session_state:
     st.session_state.lista_mezcla = [
         {"Componente": "Agua", "Volumen (L)": 0, "Grado (°GL)": 0.0}
     ]
 
-# 2. Formulario de carga
+# 3. Formulario de carga (Mejora: Valores en blanco por defecto)
 with st.form("nuevo_componente", clear_on_submit=True):
     c1, c2, c3 = st.columns([2, 1, 1])
     nombre = c1.text_input("Tipo de Alcohol:")
-    vol = c2.number_input("Volumen (L):", min_value=0, step=1)
-    grado = c3.number_input("Grado (°GL):", min_value=0.0, max_value=100.0, step=0.1)
+    # value=None hace que el campo aparezca vacío
+    vol = c2.number_input("Volumen (L):", min_value=0, step=1, value=None)
+    grado = c3.number_input("Grado (°GL):", min_value=0.0, max_value=100.0, step=0.1, value=None)
     
     submit = st.form_submit_button("➕ Añadir a la mezcla")
     if submit:
-        st.session_state.lista_mezcla.append({
-            "Componente": nombre, 
-            "Volumen (L)": int(vol), 
-            "Grado (°GL)": grado
-        })
+        # Validamos que no estén vacíos antes de añadir
+        if nombre and vol is not None and grado is not None:
+            st.session_state.lista_mezcla.append({
+                "Componente": nombre, 
+                "Volumen (L)": int(vol), 
+                "Grado (°GL)": grado
+            })
+        else:
+            st.error("Por favor, complete todos los campos.")
 
-# 3. Función de Formateo (Punto miles, Coma decimal)
+# 4. Función de Formateo (Punto miles, Coma decimal)
 def formatear_venezuela(valor, decimales=0):
     val = float(valor) if valor else 0.0
     texto = "{:,.{}f}".format(val, decimales)
     return texto.translate(str.maketrans(",.", ".,"))
 
-# --- EL CORAZÓN DEL CAMBIO: UNA SOLA MATRIZ EDITABLE ---
+# 5. Matriz Editable
 df_base = pd.DataFrame(st.session_state.lista_mezcla)
 
-# Calculamos LAA y % antes de mostrar para que la tabla sea informativa
+# Cálculos informativos previos
 v_total_temp = df_base["Volumen (L)"].sum()
 df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (°GL)"]) / 100
 df_base["% Vol"] = df_base["Volumen (L)"].apply(lambda x: (x / v_total_temp * 100) if v_total_temp > 0 else 0.0)
 
-# Mostramos el EDITOR (Punto 1: Permite editar Volumen y Punto 4: Sin subtítulo)
 df_editado = st.data_editor(
     df_base,
     num_rows="dynamic",
@@ -55,10 +64,10 @@ df_editado = st.data_editor(
     }
 )
 
-# Sincronizamos los cambios (Si editas el volumen del agua aquí, se guarda)
+# Sincronización
 st.session_state.lista_mezcla = df_editado[["Componente", "Volumen (L)", "Grado (°GL)"]].to_dict('records')
 
-# 5. Totales Finales (Punto 3: Sin subtítulo TOTALES)
+# 6. Totales
 v_total = int(df_editado["Volumen (L)"].sum())
 laa_total = df_editado["LAA"].sum()
 
@@ -68,7 +77,7 @@ t2.metric(label="TOTAL LAA", value=formatear_venezuela(laa_total, 0))
 
 st.divider()
 
-# 6. Cálculos Finales
+# 7. Cálculos Finales
 col_a, col_b = st.columns(2)
 
 with col_a:
@@ -78,6 +87,7 @@ with col_a:
             st.success(f"### {formatear_venezuela(cf, 2)} °GL")
 
 with col_b:
+    # El grado deseado suele ser 40.0, lo dejamos por defecto para agilizar
     grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
     if st.button("CALCULAR AGUA"):
         if grado_obj > 0:
