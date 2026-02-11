@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 
-st.title("🧪 Calculadora de Mezclas DUSA")
+st.title("🧪 Calculadora de Mezclas")
 
 # 1. Inicialización de la lista
 if 'lista_mezcla' not in st.session_state:
@@ -18,7 +18,7 @@ with st.form("nuevo_componente", clear_on_submit=True):
     vol = c2.number_input("Volumen (L):", min_value=0, step=1)
     grado = c3.number_input("Grado (GL):", min_value=0.0, max_value=100.0, step=0.1)
     
-    submit = st.form_submit_button("Añadir a la Mezcla")
+    submit = st.form_submit_button("añadir a la mezcla")
     if submit:
         st.session_state.lista_mezcla.append({
             "Componente": nombre, 
@@ -77,18 +77,18 @@ st.divider()
 col_a, col_b = st.columns(2)
 
 with col_a:
-    if st.button("CALCULAR GRADO FINAL (Cf)"):
+    if st.button("CALCULAR GRADO FINAL"):
         if v_total > 0:
             cf = (laa_total * 100) / v_total
-            st.success(f"### Cf: {formatear_venezuela(cf, 2)} °GL")
+            st.success(f"###  {formatear_venezuela(cf, 2)} °GL")
 
 with col_b:
-    grado_obj = st.number_input("Grado Objetivo (°GL):", value=40.0)
-    if st.button("CALCULAR AGUA (Va)"):
+    grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
+    if st.button("CALCULAR AGUA"):
         if grado_obj > 0:
             vf = (laa_total * 100) / grado_obj
             va = vf - v_total
-            st.warning(f"### Añadir: {formatear_venezuela(max(0, va), 0)} L")
+            st.warning(f"### Añadir:  {formatear_venezuela(max(0, va), 0)} L")
 
 if st.button("🗑️ Resetear Matriz"):
     st.session_state.lista_mezcla = [{"Componente": "Agua", "Volumen (L)": 0, "Grado (GL)": 0.0}]
