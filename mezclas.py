@@ -5,13 +5,13 @@ st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 
 st.title("🧪 Calculadora de Mezclas DUSA")
 
-# 1. Inicialización
+# 1. Inicialización de la lista
 if 'lista_mezcla' not in st.session_state:
     st.session_state.lista_mezcla = [
         {"Componente": "Agua", "Volumen (L)": 0, "Grado (GL)": 0.0}
     ]
 
-# 2. Formulario de carga
+# 2. Formulario de carga (Limpio y directo)
 with st.form("nuevo_componente", clear_on_submit=True):
     c1, c2, c3 = st.columns([2, 1, 1])
     nombre = c1.text_input("Nombre del Alcohol:")
@@ -26,7 +26,7 @@ with st.form("nuevo_componente", clear_on_submit=True):
             "Grado (GL)": grado
         })
 
-# 3. Procesamiento de datos
+# 3. Procesamiento de datos y Cálculos
 df_base = pd.DataFrame(st.session_state.lista_mezcla)
 v_total = df_base["Volumen (L)"].sum()
 df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (GL)"]) / 100
@@ -36,39 +36,33 @@ if v_total > 0:
 else:
     df_base["% Vol"] = 0.0
 
-# 4. Matriz de Mezcla Actual - CORREGIDA SIN 'LOCALE' PARA EVITAR EL ERROR
+# --- FUNCIÓN DE FORMATEO PARA LA TABLA ---
+def formatear_venezuela(valor, decimales=0):
+    if isinstance(valor, (int, float)):
+        # Formato con coma para decimal y punto para miles
+        formato = "{:,.0f}" if decimales == 0 else "{:,.2f}"
+        if decimales == 1: formato = "{:,.1f}"
+        return formato.format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
+    return valor
+
+# Creamos una copia visual de la tabla con el formato que pides
+df_visual = df_base.copy()
+df_visual["Volumen (L)"] = df_visual["Volumen (L)"].apply(lambda x: formatear_venezuela(x, 0))
+df_visual["Grado (GL)"] = df_visual["Grado (GL)"].apply(lambda x: formatear_venezuela(x, 1))
+df_visual["LAA"] = df_visual["LAA"].apply(lambda x: formatear_venezuela(x, 0))
+df_visual["% Vol"] = df_visual["% Vol"].apply(lambda x: formatear_venezuela(x, 1) + " %")
+
+# 4. Matriz de Mezcla Actual (Vista Proporcional)
 st.subheader("Matriz de Mezcla Actual")
+st.dataframe(df_visual, use_container_width=True, hide_index=True)
 
-df_editado = st.data_editor(
-    df_base,
-    num_rows="dynamic",
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "Componente": st.column_config.TextColumn("Componente"),
-        "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%d"),
-        "Grado (GL)": st.column_config.NumberColumn("Grado (GL)", format="%.1f"),
-        "LAA": st.column_config.NumberColumn("LAA", format="%d"),
-        "% Vol": st.column_config.NumberColumn("% Vol", format="%.1f %%")
-    }
-)
-
-# Sincronizar cambios
-st.session_state.lista_mezcla = df_editado[["Componente", "Volumen (L)", "Grado (GL)"]].to_dict('records')
-
-# 5. Función de Formato para los RESULTADOS (Aquí sí usamos el punto y la coma)
-def fmt_vzla(valor, decimales=0):
-    formato = "{:,.0f}" if decimales == 0 else "{:,.2f}"
-    res = formato.format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
-    return res
-
-# 6. Totales y Cálculos Finales
-laa_total = df_editado["LAA"].sum()
+# 5. Totales y Resultados finales (Usando la misma lógica de formato)
+laa_total = df_base["LAA"].sum()
 
 st.write("### 📊 Totales")
 t1, t2 = st.columns(2)
-t1.metric("TOTAL VOLUMEN (L)", fmt_vzla(v_total, 0))
-t2.metric("TOTAL LAA", fmt_vzla(laa_total, 0))
+t1.metric("TOTAL VOLUMEN (L)", formatear_venezuela(v_total, 0))
+t2.metric("TOTAL LAA", formatear_venezuela(laa_total, 0))
 
 st.divider()
 
@@ -78,7 +72,7 @@ with col_a:
     if st.button("CALCULAR GRADO FINAL (Cf)"):
         if v_total > 0:
             cf = (laa_total * 100) / v_total
-            st.success(f"### Cf: {fmt_vzla(cf, 2)} °GL")
+            st.success(f"### Cf: {formatear_venezuela(cf, 2)} °GL")
 
 with col_b:
     grado_obj = st.number_input("Grado Objetivo (°GL):", value=40.0)
@@ -86,7 +80,7 @@ with col_b:
         if grado_obj > 0:
             vf = (laa_total * 100) / grado_obj
             va = vf - v_total
-            st.warning(f"### Añadir: {fmt_vzla(max(0, va), 0)} L")
+            st.warning(f"### Añadir: {formatear_venezuela(max(0, va), 0)} L")
 
 if st.button("🗑️ Resetear Matriz"):
     st.session_state.lista_mezcla = [{"Componente": "Agua", "Volumen (L)": 0, "Grado (GL)": 0.0}]
