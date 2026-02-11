@@ -28,7 +28,7 @@ with st.form("nuevo_componente", clear_on_submit=True):
 
 # 3. Procesamiento de datos y Cálculos
 df_base = pd.DataFrame(st.session_state.lista_mezcla)
-v_total = df_base["Volumen (L)"].sum()
+v_total = int(df_base["Volumen (L)"].sum()) # Forzamos entero
 df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (GL)"]) / 100
 
 if v_total > 0:
@@ -36,23 +36,21 @@ if v_total > 0:
 else:
     df_base["% Vol"] = 0.0
 
-# --- FUNCIÓN DE FORMATEO CORREGIDA (Punto para miles, Coma para decimales) ---
+# --- FUNCIÓN DE FORMATEO BLINDADA (Punto para miles, Coma para decimales) ---
 def formatear_venezuela(valor, decimales=0):
-    if isinstance(valor, (int, float)):
-        # Creamos el formato americano primero (coma para miles, punto para decimal)
-        if decimales == 0:
-            texto = "{:,.0f}".format(valor)
-        else:
-            texto = "{:,.{}f}".format(valor, decimales)
-        
-        # Ahora hacemos el cambio: 
-        # Las comas (miles) pasan a ser puntos
-        # Los puntos (decimales) pasan a ser comas
-        tabla_cambio = str.maketrans(",.", ".,")
-        return texto.translate(tabla_cambio)
-    return valor
+    # Aseguramos que el valor sea numérico
+    val = float(valor) if valor else 0.0
+    # Creamos formato base (americano)
+    if decimales == 0:
+        texto = "{:,.0f}".format(val)
+    else:
+        texto = "{:,.{}f}".format(val, decimales)
+    
+    # Intercambio de signos: Coma por Punto y Punto por Coma
+    tabla = str.maketrans(",.", ".,")
+    return texto.translate(tabla)
 
-# Creamos copia visual para la matriz
+# Matriz Visual
 df_visual = df_base.copy()
 df_visual["Volumen (L)"] = df_visual["Volumen (L)"].apply(lambda x: formatear_venezuela(x, 0))
 df_visual["Grado (GL)"] = df_visual["Grado (GL)"].apply(lambda x: formatear_venezuela(x, 1))
@@ -63,16 +61,19 @@ df_visual["% Vol"] = df_visual["% Vol"].apply(lambda x: formatear_venezuela(x, 1
 st.subheader("Matriz de Mezcla Actual")
 st.dataframe(df_visual, use_container_width=True, hide_index=True)
 
-# 5. Totales (Ahora con el punto de miles garantizado)
+# 5. TOTALES CORREGIDOS
 laa_total = df_base["LAA"].sum()
 
 st.write("### 📊 Totales")
 t1, t2 = st.columns(2)
-t1.metric("TOTAL VOLUMEN (L)", formatear_venezuela(v_total, 0))
-t2.metric("TOTAL LAA", formatear_venezuela(laa_total, 0))
+
+# Aplicamos la función directamente al string del valor
+t1.metric(label="TOTAL VOLUMEN (L)", value=formatear_venezuela(v_total, 0))
+t2.metric(label="TOTAL LAA", value=formatear_venezuela(laa_total, 0))
 
 st.divider()
 
+# 6. Cálculos Finales
 col_a, col_b = st.columns(2)
 
 with col_a:
