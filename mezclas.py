@@ -1,68 +1,73 @@
 import streamlit as st
 import pandas as pd
 
+# Configuración de página
 st.set_page_config(page_title="Calculadora DUSA", layout="wide")
 
 st.title("🧪 Calculadora de Mezclas DUSA")
 
-# 1. Configuración de la sesión para los datos
+# 1. Inicialización de datos
 if 'df' not in st.session_state:
     st.session_state.df = pd.DataFrame([
         {"Componente": "Agua", "Volumen (L)": 0.0, "Grado (GL)": 0.0},
         {"Componente": "Alcohol base", "Volumen (L)": 1000.0, "Grado (GL)": 96.0}
     ])
 
-st.write("### Matriz de Mezcla")
+# 2. Cálculo de LAA para la tabla
+df_con_laa = st.session_state.df.copy()
+df_con_laa["LAA"] = (df_con_laa["Volumen (L)"] * df_con_laa["Grado (GL)"]) / 100
 
-# 2. Lógica de cálculo EN LA MISMA TABLA
-# Creamos una copia para mostrar los LAA calculados
-df_calculado = st.session_state.df.copy()
-df_calculado["LAA"] = (df_calculado["Volumen (L)"] * df_calculado["Grado (GL)"]) / 100
-
-# 3. EL EDITOR ÚNICO (Aquí es donde cargas y ves los LAA)
+# 3. EDITOR ÚNICO (Sin columna de números a la izquierda)
+st.subheader("Matriz de Mezcla")
 df_editado = st.data_editor(
-    df_calculado,
+    df_con_laa,
     num_rows="dynamic",
     use_container_width=True,
-    hide_index=True,
+    hide_index=True, # AQUÍ ELIMINAMOS LA FUCKING COLUMNA DE NÚMEROS
     column_config={
         "Componente": st.column_config.TextColumn("Componente", width="medium"),
         "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%.2f"),
         "Grado (GL)": st.column_config.NumberColumn("Grado (GL)", format="%.2f"),
-        "LAA": st.column_config.NumberColumn("LAA", format="%.2f", disabled=True), # BLOQUEADO para que no se tipee
+        "LAA": st.column_config.NumberColumn("LAA", format="%.2f", disabled=True),
     }
 )
 
-# Guardar cambios
+# Guardar cambios sin que se pierdan
 st.session_state.df = df_editado[["Componente", "Volumen (L)", "Grado (GL)"]]
 
-# 4. FILA DE TOTALES DINÁMICA
-v_total = df_editado["Volumen (L)"].sum()
-laa_total = df_editado["LAA"].sum()
+# 4. TOTALES (Sin decimales y con punto de miles)
+v_total = int(df_editado["Volumen (L)"].sum())
+laa_total = int(df_editado["LAA"].sum())
 
-# Mostramos totales como tarjetas elegantes
-c_v, c_l = st.columns(2)
-with c_v:
-    st.metric("TOTAL VOLUMEN (L)", f"{v_total:,.2f}")
-with c_l:
-    st.metric("TOTAL LAA", f"{laa_total:,.2f}")
+st.write("### 📊 Totales")
+c1, c2 = st.columns(2)
+# Formato con punto para miles y sin decimales
+with c1:
+    st.metric("TOTAL VOLUMEN (L)", f"{v_total:,.0f}".replace(",", "."))
+with c2:
+    st.metric("TOTAL LAA", f"{laa_total:,.0f}".replace(",", "."))
 
 st.divider()
 
 # 5. CÁLCULOS FINALES
-col1, col2 = st.columns(2)
+col_a, col_b = st.columns(2)
 
-with col1:
+with col_a:
     if st.button("CALCULAR GRADO FINAL (Cf)"):
         if v_total > 0:
-            cf = (laa_total * 100) / v_total
+            # Aquí sí usamos decimales para el grado porque es precisión de laboratorio
+            laa_preciso = (df_editado["Volumen (L)"] * df_editado["Grado (GL)"] / 100).sum()
+            cf = (laa_preciso * 100) / df_editado["Volumen (L)"].sum()
             st.success(f"### Cf: {cf:.2f} °GL")
 
-with col2:
+with col_b:
     grado_obj = st.number_input("Grado Objetivo (°GL):", value=40.0)
     if st.button("CALCULAR AGUA NECESARIA (Va)"):
+        laa_preciso = (df_editado["Volumen (L)"] * df_editado["Grado (GL)"] / 100).sum()
+        vol_act = df_editado["Volumen (L)"].sum()
         if grado_obj > 0:
-            vf = (laa_total * 100) / grado_obj
-            va = vf - v_total
-            st.warning(f"### Agua a añadir: {max(0, va):,.2f} L")
-            st.write(f"Volumen final será: {vf:,.2f} L")
+            vf = (laa_preciso * 100) / grado_obj
+            va = vf - vol_act
+            # Resultado de agua con punto de miles
+            va_formateada = f"{max(0, va):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            st.warning(f"### Añadir: {va_formateada} L de Agua")
