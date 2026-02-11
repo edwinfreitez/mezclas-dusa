@@ -1,7 +1,7 @@
 import streamlit as st
 
-st.title("Prueba de Conexión DUSA")
-st.write("Si puedes leer esto, la app funciona. ¡El problema era el código anterior!")
-
-vol = st.number_input("Prueba un número:", value=100)
-st.write(f"Escribiste: {vol}")
+st.set_page_config(page_title="DUSA Test")
+st.title("🚀 ¡DUSA EN LÍNEA!")
+st.balloons()
+st.success("Edwin, si ves esto, la conexión GitHub-Streamlit está PERFECTA.")
+st.write("Ahora solo falta meter las fórmulas de los alcoholes.")
