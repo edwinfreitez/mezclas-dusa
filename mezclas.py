@@ -6,8 +6,8 @@ st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 # 1. Encabezado con Logo y Título Reducido
 st.image("https://dusa.com.ve/wp-content/uploads/2020/10/Logo-Original.png", width=180)
 
-# Título reducido al 50% (aprox 24px)
-st.markdown('<h2 style="font-size: 24px; margin-bottom: 0px;">🧮 Calculadora de Mezclas</h2>', unsafe_index=True)
+# CORRECCIÓN: unsafe_allow_html=True
+st.markdown('<h2 style="font-size: 24px; margin-bottom: 0px; margin-top: -20px;">🧮 Calculadora de Mezclas</h2>', unsafe_allow_html=True)
 st.markdown("""
 **Destilerías Unidas S.A.** *© Edwin Freitez*
 """)
@@ -42,7 +42,7 @@ def formatear_venezuela(valor, decimales=0):
     texto = "{:,.{}f}".format(val, decimales)
     return texto.translate(str.maketrans(",.", ".,"))
 
-# 5. Matriz Editable y Cálculos en tiempo real
+# 5. Matriz Editable y Cálculos
 df_base = pd.DataFrame(st.session_state.lista_mezcla)
 
 v_total_temp = df_base["Volumen (L)"].sum()
@@ -66,27 +66,27 @@ df_editado = st.data_editor(
 # Sincronización
 st.session_state.lista_mezcla = df_editado[["Componente", "Volumen (L)", "Grado (°GL)"]].to_dict('records')
 
-# 6. PANEL DE CONTROL (Totales y Grado Final Automático)
+# 6. PANEL DE CONTROL (Métricas automáticas)
 v_total = int(df_editado["Volumen (L)"].sum())
 laa_total = df_editado["LAA"].sum()
 grado_final = (laa_total * 100) / v_total if v_total > 0 else 0.0
 
 st.write("---")
-t1, t2, t3 = st.columns(3) # Tres columnas para incluir el Grado Final
+t1, t2, t3 = st.columns(3)
 t1.metric(label="TOTAL VOLUMEN", value=f"{formatear_venezuela(v_total, 0)} L")
 t2.metric(label="TOTAL LAA", value=formatear_venezuela(laa_total, 0))
 t3.metric(label="GRADO FINAL", value=f"{formatear_venezuela(grado_final, 2)} °GL")
 
 st.divider()
 
-# 7. Cálculo de Agua (Único botón restante)
+# 7. Cálculo de Agua
 col_input, col_boton = st.columns([2, 2])
 
 with col_input:
     grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
 
 with col_boton:
-    st.write("##") # Espaciador para alinear el botón
+    st.write("##") # Espaciador
     if st.button("CALCULAR AGUA (Va)"):
         if grado_obj > 0:
             vf = (laa_total * 100) / grado_obj
