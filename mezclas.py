@@ -36,11 +36,9 @@ if v_total > 0:
 else:
     df_base["% Vol"] = 0.0
 
-# 4. Matriz de Mezcla Actual con formato local (punto miles, coma decimal)
-st.subheader("Matriz de Mezcla")
+# 4. Matriz de Mezcla Actual con formato específico
+st.subheader("Matriz de Mezcla Actual")
 
-# Configuramos el formato visual de la tabla
-# Nota: 'en_US' usa coma para miles, por eso hacemos un truco visual en los totales más abajo
 df_editado = st.data_editor(
     df_base,
     num_rows="dynamic",
@@ -48,10 +46,26 @@ df_editado = st.data_editor(
     hide_index=True,
     column_config={
         "Componente": st.column_config.TextColumn("Componente"),
-        "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%d"),
-        "Grado (°GL)": st.column_config.NumberColumn("Grado (°GL)", format="%.1f"),
-        "LAA": st.column_config.NumberColumn("LAA", format="%.2f"),
-        "% Vol": st.column_config.NumberColumn("% Vol", format="%.1f %%")
+        "Volumen (L)": st.column_config.NumberColumn(
+            "Volumen (L)", 
+            format="%d",     # Entero puro
+            help="Volumen en litros"
+        ),
+        "Grado (°GL)": st.column_config.NumberColumn(
+            "Grado (°GL)", 
+            format="%.1f", 
+            locale="es-ES"  # <--- Esto fuerza la coma decimal y punto de miles
+        ),
+        "LAA": st.column_config.NumberColumn(
+            "LAA", 
+            format="%d",     # <--- Sin decimales como pediste
+            locale="es-ES"   # <--- Punto para miles
+        ),
+        "% Vol": st.column_config.NumberColumn(
+            "% Vol", 
+            format="%.1f %%", 
+            locale="es-ES"  # <--- Coma para decimales
+        )
     }
 )
 
