@@ -14,7 +14,7 @@ if 'lista_mezcla' not in st.session_state:
 # 2. Formulario de carga
 with st.form("nuevo_componente", clear_on_submit=True):
     c1, c2, c3 = st.columns([2, 1, 1])
-    nombre = c1.text_input("Nombre del Alcohol:")
+    nombre = c1.text_input("Tipo de Alcohol:")
     vol = c2.number_input("Volumen (L):", min_value=0, step=1)
     grado = c3.number_input("Grado (GL):", min_value=0.0, max_value=100.0, step=0.1)
     
