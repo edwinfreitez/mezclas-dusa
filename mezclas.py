@@ -26,11 +26,21 @@ with st.form("nuevo_componente", clear_on_submit=True):
             "Grado (°GL)": grado
         })
 
-# 3. Procesamiento de datos y Cálculos
+# 3. Función de Formateo (Punto miles, Coma decimal)
+def formatear_venezuela(valor, decimales=0):
+    val = float(valor) if valor else 0.0
+    texto = "{:,.{}f}".format(val, decimales)
+    return texto.translate(str.maketrans(",.", ".,"))
+
+# --- EL CORAZÓN DEL CAMBIO: UNA SOLA MATRIZ EDITABLE ---
 df_base = pd.DataFrame(st.session_state.lista_mezcla)
 
-# --- MEJORA 1: Matriz editable para colocar volumen al Agua y borrar filas ---
-# Usamos data_editor como única tabla, permitiendo añadir/borrar y editar el volumen
+# Calculamos LAA y % antes de mostrar para que la tabla sea informativa
+v_total_temp = df_base["Volumen (L)"].sum()
+df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (°GL)"]) / 100
+df_base["% Vol"] = df_base["Volumen (L)"].apply(lambda x: (x / v_total_temp * 100) if v_total_temp > 0 else 0.0)
+
+# Mostramos el EDITOR (Punto 1: Permite editar Volumen y Punto 4: Sin subtítulo)
 df_editado = st.data_editor(
     df_base,
     num_rows="dynamic",
@@ -39,48 +49,19 @@ df_editado = st.data_editor(
     column_config={
         "Componente": st.column_config.TextColumn("Componente"),
         "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%d"),
-        "Grado (°GL)": st.column_config.NumberColumn("Grado (°GL)", format="%.1f")
+        "Grado (°GL)": st.column_config.NumberColumn("Grado (°GL)", format="%.1f"),
+        "LAA": st.column_config.NumberColumn("LAA", format="%.0f", disabled=True),
+        "% Vol": st.column_config.NumberColumn("% Vol", format="%.1f %%", disabled=True)
     }
 )
 
-# Sincronizamos cambios (esto permite que lo que edites se mantenga)
-st.session_state.lista_mezcla = df_editado.to_dict('records')
+# Sincronizamos los cambios (Si editas el volumen del agua aquí, se guarda)
+st.session_state.lista_mezcla = df_editado[["Componente", "Volumen (L)", "Grado (°GL)"]].to_dict('records')
 
-# Cálculos basados en la tabla editada
+# 5. Totales Finales (Punto 3: Sin subtítulo TOTALES)
 v_total = int(df_editado["Volumen (L)"].sum())
-df_editado["LAA"] = (df_editado["Volumen (L)"] * df_editado["Grado (°GL)"]) / 100
-
-if v_total > 0:
-    df_editado["% Vol"] = (df_editado["Volumen (L)"] / v_total) * 100
-else:
-    df_editado["% Vol"] = 0.0
-
-# --- FUNCIÓN DE FORMATEO BLINDADA (Punto para miles, Coma para decimales) ---
-def formatear_venezuela(valor, decimales=0):
-    val = float(valor) if valor else 0.0
-    if decimales == 0:
-        texto = "{:,.0f}".format(val)
-    else:
-        texto = "{:,.{}f}".format(val, decimales)
-    tabla = str.maketrans(",.", ".,")
-    return texto.translate(tabla)
-
-# Matriz Visual (La que mostramos para lectura con los puntos y comas)
-# Nota: Mostramos df_editado pero con formato visual para LAA y %
-df_visual = df_editado.copy()
-df_visual["Volumen (L)"] = df_visual["Volumen (L)"].apply(lambda x: formatear_venezuela(x, 0))
-df_visual["Grado (°GL)"] = df_visual["Grado (°GL)"].apply(lambda x: formatear_venezuela(x, 1))
-df_visual["LAA"] = df_visual["LAA"].apply(lambda x: formatear_venezuela(x, 0))
-df_visual["% Vol"] = df_visual["% Vol"].apply(lambda x: formatear_venezuela(x, 1) + " %")
-
-# --- MEJORA 4: Eliminado subtítulo Matriz de Mezcla Actual ---
-# Mostramos la tabla formateada (estática para lectura perfecta)
-st.dataframe(df_visual, use_container_width=True, hide_index=True)
-
-# 5. TOTALES CORREGIDOS
 laa_total = df_editado["LAA"].sum()
 
-# --- MEJORA 3: Eliminado subtítulo TOTALES ---
 t1, t2 = st.columns(2)
 t1.metric(label="TOTAL VOLUMEN (L)", value=formatear_venezuela(v_total, 0))
 t2.metric(label="TOTAL LAA", value=formatear_venezuela(laa_total, 0))
