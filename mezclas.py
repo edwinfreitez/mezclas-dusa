@@ -3,23 +3,23 @@ import pandas as pd
 
 st.set_page_config(page_title="Calculadora DUSA", layout="centered")
 
-st.title("🧪 Calculadora de Mezclas DUSA")
+st.title("🧪 CALCULADORA DE MEZLCAS")
 
 # 1. Inicialización de la lista
 if 'lista_mezcla' not in st.session_state:
     st.session_state.lista_mezcla = [
-        {"Componente": "Agua", "Volumen (L)": 0, "Grado (GL)": 0.0}
+        {"Componente": "Agua", "Volumen (L)": 0, "Grado (°GL)": 0.0}
     ]
 
 # 2. Formulario de carga
-with st.expander("➕ Añadir Nuevo Componente", expanded=True):
+with st.expander("➕ Añadir", expanded=True):
     with st.form("nuevo_componente", clear_on_submit=True):
         c1, c2, c3 = st.columns([2, 1, 1])
-        nombre = c1.text_input("Nombre del Alcohol:")
+        nombre = c1.text_input("Tipo del Alcohol:")
         vol = c2.number_input("Volumen (L):", min_value=0, step=1)
         grado = c3.number_input("Grado (GL):", min_value=0.0, max_value=100.0, step=0.1)
         
-        submit = st.form_submit_button("Añadir a la Mezcla")
+        submit = st.form_submit_button("Añadir a la mezcla")
         if submit:
             st.session_state.lista_mezcla.append({
                 "Componente": nombre, 
@@ -32,14 +32,14 @@ df_base = pd.DataFrame(st.session_state.lista_mezcla)
 v_total = df_base["Volumen (L)"].sum()
 
 # Cálculos de LAA y %
-df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (GL)"]) / 100
+df_base["LAA"] = (df_base["Volumen (L)"] * df_base["Grado (°GL)"]) / 100
 if v_total > 0:
     df_base["% Vol"] = (df_base["Volumen (L)"] / v_total) * 100
 else:
     df_base["% Vol"] = 0.0
 
 # 4. Matriz de Mezcla Actual con opción de ELIMINAR
-st.subheader("Matriz de Mezcla Actual")
+st.subheader("Matriz de Componentes")
 st.info("Para eliminar una fila, selecciónela y pulse la tecla 'Suprimir' o use el menú del editor.")
 
 # Formateo de números al estilo solicitado (Punto miles, Coma decimal)
