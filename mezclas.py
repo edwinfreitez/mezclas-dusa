@@ -82,19 +82,17 @@ t3.metric(label="GRADO FINAL", value=f"{formatear_venezuela(grado_final, 2)} °G
 
 st.divider()
 
-# 7. Cálculo de Agua (Único botón interactivo)
-col_input, col_boton = st.columns([2, 2])
+# 7. Cálculo de Agua (REORGANIZADO VERTICALMENTE)
+# Eliminamos las columnas aquí para que el botón y el resultado queden debajo del input
+grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
 
-with col_input:
-    grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
+if st.button("CALCULAR AGUA (Va)", use_container_width=True):
+    if grado_obj > 0:
+        vf = (laa_total * 100) / grado_obj
+        va = max(0, vf - v_total)
+        st.warning(f"### Añadir: {formatear_venezuela(va, 0)} L")
 
-with col_boton:
-    st.write("##") # Espaciador para alinear con el input
-    if st.button("CALCULAR AGUA (Va)"):
-        if grado_obj > 0:
-            vf = (laa_total * 100) / grado_obj
-            va = max(0, vf - v_total)
-            st.warning(f"### Añadir: {formatear_venezuela(va, 0)} L")
+st.write(" ") # Pequeño espacio estético
 
 # Botón de reset
 if st.button("🗑️ Resetear Matriz"):
