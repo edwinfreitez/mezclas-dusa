@@ -86,7 +86,7 @@ with col_a:
     if st.button("CALCULAR GRADO FINAL (°GL)"):
         if v_total > 0:
             cf = (laa_total * 100) / v_total
-            st.success(f"### Cf: {fmt_vzla(cf, 2)} °GL")
+            st.success(f"###  {fmt_vzla(cf, 2)} °GL")
 
 with col_b:
     grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
