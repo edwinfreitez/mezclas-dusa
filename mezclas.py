@@ -76,9 +76,9 @@ grado_final = (laa_total * 100) / v_total if v_total > 0 else 0.0
 
 st.write("---")
 t1, t2, t3 = st.columns(3)
-t1.metric(label="TOTAL VOLUMEN", value=f"{formatear_venezuela(v_total, 0)} L")
-t2.metric(label="TOTAL LAA", value=formatear_venezuela(laa_total, 0))
-t3.metric(label="GRADO FINAL", value=f"{formatear_venezuela(grado_final, 2)} °GL")
+t1.metric(label="VOLUMEN TOTAL DE MEZCLA", value=f"{formatear_venezuela(v_total, 0)} L")
+t2.metric(label="LAA TOTAL DE MEZCLA", value=formatear_venezuela(laa_total, 0))
+t3.metric(label="GRADO FINAL DE MEZCLA", value=f"{formatear_venezuela(grado_final, 2)} °GL")
 
 st.divider()
 
