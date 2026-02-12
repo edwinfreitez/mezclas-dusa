@@ -9,7 +9,7 @@ st.image("https://dusa.com.ve/wp-content/uploads/2020/10/Logo-Original.png", wid
 # Título con tamaño controlado (24px)
 st.markdown('<h2 style="font-size: 24px; margin-bottom: 0px; margin-top: -20px;">🧮 Calculadora de Mezclas</h2>', unsafe_allow_html=True)
 st.markdown("""
-**Destilerías Unidas S.A.** *© Edwin Freitez*
+**Destilerías Unidas, S.A.** *© Edwin Freitez*
 """)
 
 # 2. Inicialización de la lista
@@ -86,7 +86,7 @@ st.divider()
 # Eliminamos las columnas aquí para que el botón y el resultado queden debajo del input
 grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0)
 
-if st.button("CALCULAR AGUA (Va)", use_container_width=True):
+if st.button("CALCULAR AGUA", use_container_width=True):
     if grado_obj > 0:
         vf = (laa_total * 100) / grado_obj
         va = max(0, vf - v_total)
@@ -95,6 +95,6 @@ if st.button("CALCULAR AGUA (Va)", use_container_width=True):
 st.write(" ") # Pequeño espacio estético
 
 # Botón de reset
-if st.button("🗑️ Resetear Matriz"):
+if st.button("🗑️ Resetear"):
     st.session_state.lista_mezcla = [{"Componente": "Agua", "Volumen (L)": 0, "Grado (°GL)": 0.0}]
     st.rerun()
