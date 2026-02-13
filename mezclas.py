@@ -71,7 +71,7 @@ with tab1:
     st.divider()
     grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0, key="obj_v")
 
-    if st.button("CALCULAR AGUA", use_container_width=True, key="btn_v"):
+    if st.button("Calcular Agua", use_container_width=True, key="btn_v"):
         if grado_obj > 0:
             vf = (laa_tot_v * 100) / grado_obj
             va = max(0, vf - v_tot_v)
@@ -145,6 +145,6 @@ with tab2:
 
         st.success(f"✅ Mezcle para base de **{formatear_venezuela(grado_mezcla_sin_agua, 2)} °GL** y complete con agua hasta **{vol_final_deseado} L**.")
 
-    if st.button("🗑️ Resetear Pestaña", key="res_p"):
+    if st.button("🗑️ Resetear", key="res_p"):
         st.session_state.lista_pct = []
         st.rerun()
