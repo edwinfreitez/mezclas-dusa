@@ -50,7 +50,7 @@ with tab1:
     t3.metric("GRADO FINAL", f"{formatear_venezuela(grado_f_v, 2)} °GL")
 
 # =========================================================
-# PESTAÑA 2: EXPLOSIÓN DE RECETA (%) - LÓGICA CORREGIDA
+# PESTAÑA 2: EXPLOSIÓN DE RECETA (%) - CON AMBAS OPCIONES
 # =========================================================
 with tab2:
     if 'lista_pct' not in st.session_state:
@@ -59,8 +59,12 @@ with tab2:
     c_conf1, c_conf2 = st.columns(2)
     vol_final_deseado = c_conf1.number_input("Volumen Final Mezcla (L):", min_value=1, value=1000)
     grado_final_deseado = c_conf2.number_input("Grado Final Deseado (°GL):", value=40.0)
+    
+    # NUEVO SELECTOR DE BASE
+    tipo_base = st.radio("Base del Porcentaje:", 
+                         ["% V/V (Sobre volumen de componentes)", "% LAA/LAA (Sobre alcohol puro)"],
+                         horizontal=True)
 
-    # El LAA total que debe contener la mezcla para cumplir el objetivo
     laa_total_requerido = (vol_final_deseado * grado_final_deseado) / 100
 
     with st.form("nuevo_pct", clear_on_submit=True):
@@ -75,19 +79,25 @@ with tab2:
     df_p = pd.DataFrame(st.session_state.lista_pct)
     
     if not df_p.empty:
-        # 1. Calculamos el Grado Promedio Ponderado de la base de alcoholes (Grado Mezcla Alcoholes)
-        # Grado Mezcla = Suma( %_i * Grado_i ) / Suma( %_i )
-        suma_productos = (df_p["%"] * df_p["Grado (°GL)"]).sum()
         suma_pct = df_p["%"].sum()
-        grado_mezcla_alcoholes = suma_productos / suma_pct if suma_pct > 0 else 0
-
-        # 2. Calculamos cuánto LAA debe aportar cada componente
-        # LAA_i = LAA_Total_Requerido * ( %_i / Suma_Total_% )
-        df_p["LAA"] = laa_total_requerido * (df_p["%"] / suma_pct)
         
-        # 3. Calculamos el Volumen (L) de cada componente para dar ese LAA
-        # Vol_i = LAA_i * 100 / Grado_i
-        df_p["Volumen (L)"] = (df_p["LAA"] * 100) / df_p["Grado (°GL)"]
+        # --- LÓGICA SEGÚN LA BASE ---
+        if "V/V" in tipo_base:
+            # Lógica 1: % sobre el volumen líquido de los alcoholes
+            # Primero hallamos el grado promedio ponderado para saber cuántos alcoholes caben
+            grado_pond = (df_p["%"] * df_p["Grado (°GL)"]).sum() / suma_pct if suma_pct > 0 else 0
+            # Vol total de alcoholes = LAA total requerido / (Grado ponderado / 100)
+            vol_total_alc = (laa_total_requerido * 100) / grado_pond if grado_pond > 0 else 0
+            
+            df_p["Volumen (L)"] = vol_total_alc * (df_p["%"] / suma_pct)
+            df_p["LAA"] = (df_p["Volumen (L)"] * df_p["Grado (°GL)"]) / 100
+        
+        else:
+            # Lógica 2: % sobre el alcohol puro (LAA/LAA)
+            # Cada componente aporta un % del LAA total
+            df_p["LAA"] = laa_total_requerido * (df_p["%"] / suma_pct)
+            # Vol_i = LAA_i / (Grado_i / 100)
+            df_p["Volumen (L)"] = (df_p["LAA"] * 100) / df_p["Grado (°GL)"]
 
         df_ed_p = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, hide_index=True, key="ed_p",
                                    column_config={
@@ -102,15 +112,12 @@ with tab2:
         agua_a_añadir = max(0.0, vol_final_deseado - vol_total_alcoholes)
 
         st.write("---")
-        if abs(suma_pct - 100) > 0.1:
-            st.warning(f"⚠️ La suma de porcentajes es {suma_pct}%. Se recomienda que sumen 100% para evitar confusiones.")
-
         c_res1, c_res2, c_res3 = st.columns(3)
         c_res1.metric("VOL. ALCOHOLES", f"{formatear_venezuela(vol_total_alcoholes, 2)} L")
         c_res2.metric("AGUA A AÑADIR", f"{formatear_venezuela(agua_a_añadir, 2)} L")
         c_res3.metric("LAA TOTAL", f"{formatear_venezuela(laa_total_requerido, 2)}")
 
-        st.success(f"✅ Para obtener **{vol_final_deseado} L** a **{grado_final_deseado}°GL**, mezcle los alcoholes arriba indicados y complete con **{formatear_venezuela(agua_a_añadir, 2)} L** de agua.")
+        st.success(f"✅ Receta calculada sobre **{tipo_base.split(' ')[1]}**. Mezcle los alcoholes y complete con **{formatear_venezuela(agua_a_añadir, 2)} L** de agua.")
 
     if st.button("🗑️ Resetear Pestaña", key="res_p"):
         st.session_state.lista_pct = []
