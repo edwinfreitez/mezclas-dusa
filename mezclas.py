@@ -17,7 +17,7 @@ st.markdown("""**Destilerías Unidas, S.A.** *© Edwin Freitez*""")
 tab1, tab2 = st.tabs(["📏 Por Volumen (L)", "📊 Explosión de Receta (%)"])
 
 # =========================================================
-# PESTAÑA 1: CÁLCULO POR VOLUMEN (Sin cambios)
+# PESTAÑA 1: CÁLCULO POR VOLUMEN (RESTAURADA AL 100%)
 # =========================================================
 with tab1:
     if 'lista_mezcla' not in st.session_state:
@@ -28,15 +28,34 @@ with tab1:
         nombre = c1.text_input("Tipo de Alcohol:")
         vol = c2.number_input("Volumen (L):", min_value=0, step=1, value=None)
         grado = c3.number_input("Grado (°GL):", min_value=0.0, max_value=100.0, step=0.1, value=None)
-        if st.form_submit_button("➕ Añadir"):
+        if st.form_submit_button("➕ Añadir a la mezcla"):
             if nombre and vol is not None and grado is not None:
                 st.session_state.lista_mezcla.append({"Componente": nombre, "Volumen (L)": int(vol), "Grado (°GL)": grado})
+            else:
+                st.error("Por favor, complete todos los campos.")
 
     df_v = pd.DataFrame(st.session_state.lista_mezcla)
-    vt_v = df_v["Volumen (L)"].sum()
-    df_v["LAA"] = (df_v["Volumen (L)"] * df_v["Grado (°GL)"]) / 100
     
-    df_edit_v = st.data_editor(df_v, num_rows="dynamic", use_container_width=True, hide_index=True, key="ed_v")
+    # Cálculos informativos automáticos (Restaurados)
+    v_total_temp = df_v["Volumen (L)"].sum()
+    df_v["LAA"] = (df_v["Volumen (L)"] * df_v["Grado (°GL)"]) / 100
+    df_v["% Vol"] = df_v["Volumen (L)"].apply(lambda x: (x / v_total_temp * 100) if v_total_temp > 0 else 0.0)
+
+    # Editor de datos con la columna % Vol de vuelta
+    df_edit_v = st.data_editor(
+        df_v, 
+        num_rows="dynamic", 
+        use_container_width=True, 
+        hide_index=True, 
+        key="ed_v",
+        column_config={
+            "Componente": st.column_config.TextColumn("Componente"),
+            "Volumen (L)": st.column_config.NumberColumn("Volumen (L)", format="%d"),
+            "Grado (°GL)": st.column_config.NumberColumn("Grado (°GL)", format="%.1f"),
+            "LAA": st.column_config.NumberColumn("LAA", format="%.0f", disabled=True),
+            "% Vol": st.column_config.NumberColumn("% Vol", format="%.1f %%", disabled=True)
+        }
+    )
     st.session_state.lista_mezcla = df_edit_v[["Componente", "Volumen (L)", "Grado (°GL)"]].to_dict('records')
 
     v_tot_v = int(df_edit_v["Volumen (L)"].sum())
@@ -45,12 +64,25 @@ with tab1:
 
     st.write("---")
     t1, t2, t3 = st.columns(3)
-    t1.metric("VOLUMEN TOTAL", f"{formatear_venezuela(v_tot_v, 0)} L")
-    t2.metric("LAA TOTAL", formatear_venezuela(laa_tot_v, 2))
-    t3.metric("GRADO FINAL", f"{formatear_venezuela(grado_f_v, 2)} °GL")
+    t1.metric("VOLUMEN TOTAL DE MEZCLA", f"{formatear_venezuela(v_tot_v, 0)} L")
+    t2.metric("LAA TOTAL DE MEZCLA", formatear_venezuela(laa_tot_v, 0))
+    t3.metric("GRADO FINAL DE MEZCLA", f"{formatear_venezuela(grado_f_v, 2)} °GL")
+
+    st.divider()
+    grado_obj = st.number_input("Grado Deseado (°GL):", value=40.0, key="obj_v")
+
+    if st.button("CALCULAR AGUA", use_container_width=True, key="btn_v"):
+        if grado_obj > 0:
+            vf = (laa_tot_v * 100) / grado_obj
+            va = max(0, vf - v_tot_v)
+            st.warning(f"### Añadir: {formatear_venezuela(va, 0)} L")
+
+    if st.button("🗑️ Resetear", key="reset_v"):
+        st.session_state.lista_mezcla = [{"Componente": "Agua", "Volumen (L)": 0, "Grado (°GL)": 0.0}]
+        st.rerun()
 
 # =========================================================
-# PESTAÑA 2: EXPLOSIÓN DE RECETA (%) - CON GRADO DE ALCOHOLES
+# PESTAÑA 2: EXPLOSIÓN DE RECETA (%)
 # =========================================================
 with tab2:
     if 'lista_pct' not in st.session_state:
@@ -80,11 +112,6 @@ with tab2:
     if not df_p.empty:
         suma_pct = df_p["%"].sum()
         
-        # --- CÁLCULO DEL GRADO DE LA MEZCLA DE ALCOHOLES (SIN AGUA) ---
-        # Independientemente de la base, el grado ponderado de la mezcla de alcoholes es:
-        # Suma ( %_i * Grado_i ) / Suma ( %_i ) -> Solo para V/V
-        # Para LAA/LAA la ponderación es distinta, pero el programa lo calcula tras obtener los volúmenes.
-        
         if "V/V" in tipo_base:
             grado_mezcla_sin_agua = (df_p["%"] * df_p["Grado (°GL)"]).sum() / suma_pct if suma_pct > 0 else 0
             vol_total_alc = (laa_total_requerido * 100) / grado_mezcla_sin_agua if grado_mezcla_sin_agua > 0 else 0
@@ -110,14 +137,13 @@ with tab2:
         agua_a_añadir = max(0.0, vol_final_deseado - vol_total_alcoholes)
 
         st.write("---")
-        # --- PANEL DE MÉTRICAS (4 COLUMNAS) ---
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("VOL. ALCOHOLES", f"{formatear_venezuela(vol_total_alcoholes, 2)} L")
         m2.metric("AGUA A AÑADIR", f"{formatear_venezuela(agua_a_añadir, 2)} L")
         m3.metric("GRADO MEZCLA ALC.", f"{formatear_venezuela(grado_mezcla_sin_agua, 2)} °")
         m4.metric("LAA REQUERIDO", f"{formatear_venezuela(laa_total_requerido, 2)}")
 
-        st.success(f"✅ Mezcle los alcoholes para obtener una base de **{formatear_venezuela(grado_mezcla_sin_agua, 2)} °GL** y complete con agua hasta los **{vol_final_deseado} L**.")
+        st.success(f"✅ Mezcle para base de **{formatear_venezuela(grado_mezcla_sin_agua, 2)} °GL** y complete con agua hasta **{vol_final_deseado} L**.")
 
     if st.button("🗑️ Resetear Pestaña", key="res_p"):
         st.session_state.lista_pct = []
